@@ -1,47 +1,18 @@
-name: Copy dist to artifacts branch
-
-on:
-  push:
-    branches:
-      - main  # Reemplaza "main" por la rama desde donde quieres activar el workflow.
-
+name: GitHub Actions Demo
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+on: [push]
 jobs:
-  copy-dist:
+  Explore-GitHub-Actions:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Clona el repositorio
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Necesario para empujar cambios a otra rama.
-
-      # 2. Construye el proyecto (si es necesario)
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'  # Cambia la versión según tu proyecto.
-      - name: Install dependencies and build
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+      - name: List files in the repository
         run: |
-          npm ci
-          npm run build
-
-      # 3. Copia el contenido de dist a la rama `artifacts`
-      - name: Copy dist to artifacts branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Cambia a la rama de destino o créala si no existe
-          git switch artifacts || git switch --create artifacts
-
-          # Limpia la rama y copia los archivos de dist
-          git rm -rf .  # Elimina archivos existentes
-          cp -r dist/* .  # Copia el contenido de dist a la raíz
-
-          # Agrega y confirma los cambios
-          git add .
-          git commit -m "Actualizar contenido de dist desde main"
-
-          # Empuja los cambios a la rama artifacts
-          git push origin artifacts
+          ls ${{ github.workspace }}
+      - run: echo "🍏 This job's status is ${{ job.status }}."
