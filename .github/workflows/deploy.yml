@@ -16,47 +16,47 @@ jobs:
         with:
           fetch-depth: 0  # Asegura que se pueda trabajar con múltiples ramas.
 
-      # 2. Crear la rama `artifacts` desde cero
-      - name: Prepare artifacts branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Eliminar la rama artifacts si ya existe
-          if git rev-parse --verify origin/artifacts > /dev/null 2>&1; then
-            git push origin --delete artifacts
-          fi
-
-          # Crear la rama artifacts basada en main
-          git checkout -b artifacts
-
-      # 3. Limpiar todo excepto el directorio .git
-      - name: Clean branch
-        run: |
-          rm -rf ./*
-          rm -rf .[^.] .??* || true  # Borra archivos ocultos excepto .git
-
-      # 4. Instalar dependencias y construir el proyecto
+      # 2. Instalar dependencias y construir el proyecto
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'  # Ajusta según tu proyecto
+          node-version: '18'  # Ajusta según la versión de Node.js necesaria.
       - name: Install dependencies and build
         run: |
           npm ci
           npm run build
 
-      # 5. Mover los archivos de `dist` a la raíz de la rama
-      - name: Move dist content
+      # 3. Crear o limpiar la rama artifacts
+      - name: Prepare artifacts branch
         run: |
-          cp -r dist/* .
-          rm -rf dist node_modules  # Limpiar dist y node_modules
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Agregar y confirmar los cambios
+          # Elimina la rama artifacts si ya existe
+          if git rev-parse --verify origin/artifacts > /dev/null 2>&1; then
+            git push origin --delete artifacts
+          fi
+
+          # Crea la nueva rama artifacts basada en main
+          git checkout -b artifacts
+
+      # 4. Limpiar todo excepto `dist`
+      - name: Clean branch and copy dist content
+        run: |
+          # Elimina todos los archivos rastreados por Git
+          git rm -rf . || true
+          
+          # Copia el contenido de dist a la raíz
+          cp -r dist/* .
+          
+          # Elimina dist y node_modules
+          rm -rf dist node_modules
+
+          # Agrega y confirma los cambios
           git add .
           git commit -m "Deploy artifacts from main"
 
-      # 6. Empujar los cambios a la rama artifacts
+      # 5. Empujar los cambios a la rama artifacts
       - name: Push to artifacts branch
         run: |
           git push origin artifacts --force
