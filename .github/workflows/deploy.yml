@@ -27,7 +27,15 @@ jobs:
           npm ci
           npm run build
 
-      # 3. Copia el contenido de dist a la rama `artifacts`
+      # 3. Verifica que dist existe antes de copiar
+      - name: Check dist folder
+        run: |
+          if [ ! -d dist ]; then
+            echo "Error: dist folder does not exist"
+            exit 1
+          fi
+
+      # 4. Copia el contenido de dist a la rama `artifacts`
       - name: Copy dist to artifacts branch
         run: |
           git config user.name "github-actions[bot]"
@@ -41,7 +49,7 @@ jobs:
           git rm -rf . || true  # Elimina archivos rastreados en Git si existen
 
           # Copia el contenido de dist
-          cp -r ../dist/* .  # Copia el contenido de dist al directorio actual
+          cp -r dist/* .  # Copia el contenido de dist al directorio actual
 
           # Agrega y confirma los cambios
           git add .
