@@ -1,64 +1,62 @@
-name: Copy dist to artifacts branch
+name: Deploy to Artifacts Branch
 
 on:
   push:
     branches:
-      - main
+      - main  # Ejecuta el workflow solo cuando hay un push en la rama main.
 
 jobs:
-  copy-dist:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Clona el repositorio
+      # 1. Clonar el repositorio
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Necesario para empujar cambios a otra rama.
+          fetch-depth: 0  # Asegura que se pueda trabajar con múltiples ramas.
 
-      # 2. Construye el proyecto (si es necesario)
+      # 2. Crear la rama `artifacts` desde cero
+      - name: Prepare artifacts branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Eliminar la rama artifacts si ya existe
+          if git rev-parse --verify origin/artifacts > /dev/null 2>&1; then
+            git push origin --delete artifacts
+          fi
+
+          # Crear la rama artifacts basada en main
+          git checkout -b artifacts
+
+      # 3. Limpiar todo excepto el directorio .git
+      - name: Clean branch
+        run: |
+          rm -rf ./*
+          rm -rf .[^.] .??* || true  # Borra archivos ocultos excepto .git
+
+      # 4. Instalar dependencias y construir el proyecto
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-
+          node-version: '18'  # Ajusta según tu proyecto
       - name: Install dependencies and build
         run: |
           npm ci
           npm run build
 
-      # 3. Asegúrate de que el directorio dist exista
-      - name: Check dist folder
+      # 5. Mover los archivos de `dist` a la raíz de la rama
+      - name: Move dist content
         run: |
-          if [ ! -d dist ]; then
-            echo "Error: dist folder does not exist"
-            exit 1
-          fi
+          cp -r dist/* .
+          rm -rf dist node_modules  # Limpiar dist y node_modules
 
-      # 4. Cambia a la rama `artifacts` o créala si no existe
-      - name: Switch to artifacts branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin artifacts:artifacts || echo "Creating new branch 'artifacts'"
-          git switch artifacts || git switch --create artifacts
-
-      # 5. Limpia la rama `artifacts` y copia los archivos desde `dist`
-      - name: Clean and copy files
-        run: |
-          # Elimina todos los archivos rastreados y no rastreados
-          git rm -rf . || true
-          rm -rf ./* || true
-
-          # Copia el contenido de `dist`
-          cp -r ../dist/* .
-
-          # Agrega y confirma los cambios
+          # Agregar y confirmar los cambios
           git add .
-          git commit -m "Actualizar contenido de dist desde main" || echo "No changes to commit"
+          git commit -m "Deploy artifacts from main"
 
-      # 6. Empuja los cambios a la rama `artifacts`
-      - name: Push changes
-        run: git push origin artifacts
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 6. Empujar los cambios a la rama artifacts
+      - name: Push to artifacts branch
+        run: |
+          git push origin artifacts --force
